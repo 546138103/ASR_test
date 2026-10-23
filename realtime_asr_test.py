@@ -2,12 +2,14 @@
 from pathlib import Path
 from collections import deque
 import time
+import argparse
+import json
+
+from semantic_client import request_willingness, SemanticServiceError
 
 import numpy as np
 import sounddevice as sd
 
-from funasr import AutoModel
-from funasr.utils.postprocess_utils import rich_transcription_postprocess
 
 
 # ========== 1. 配置 ==========
@@ -29,18 +31,14 @@ LANGUAGE = "auto"        # 自动识别普通话/粤语等
 
 # ========== 2. 加载 SenseVoiceSmall ==========
 
-if not MODEL_DIR.is_dir():
-    raise FileNotFoundError(f"模型目录不存在：{MODEL_DIR}")
-
-print("正在加载 SenseVoiceSmall...")
-
-model = AutoModel(
-    model=str(MODEL_DIR),
-    device="cpu",
-    disable_update=True
-)
-
-print("模型加载完成！")
+def load_model():
+    from funasr import AutoModel
+    if not MODEL_DIR.is_dir():
+        raise FileNotFoundError(f"模型目录不存在：{MODEL_DIR}")
+    print("正在加载 SenseVoiceSmall...")
+    loaded = AutoModel(model=str(MODEL_DIR), device="cpu", disable_update=True)
+    print("模型加载完成！")
+    return loaded
 
 
 # ========== 3. 从麦克风录制一句话 ==========
@@ -134,7 +132,9 @@ def record_sentence():
 
 # ========== 4. 识别语音 ==========
 
-def recognize(audio):
+def recognize(audio, model):
+
+    from funasr.utils.postprocess_utils import rich_transcription_postprocess
 
     start = time.perf_counter()
 
@@ -160,22 +160,52 @@ def recognize(audio):
     print("原始结果：", raw_text)
     print("识别文字：", clean_text)
     print(f"识别耗时：{elapsed:.2f} 秒")
+    return clean_text
 
 
-# ========== 5. 主程序 ==========
+# ========== 5. 发送整句文字并显示语义结果 ==========
 
-print("\n开始麦克风语音识别")
-print("按 Ctrl+C 退出程序")
+def send_text(text, args):
+    start = time.perf_counter()
+    try:
+        result = request_willingness(text, server_url=args.server, system_prompt=args.prompt)
+    except SemanticServiceError as error:
+        print(f"语义请求失败：{error}；本句未获得判断，不计为 no 或 unclear。")
+        return False
+    print("语义识别：", result['result'])
+    print("判断原因：", result['reason'])
+    print("完整结果：", json.dumps(result, ensure_ascii=False))
+    print(f"语义请求耗时：{time.perf_counter() - start:.2f} 秒")
+    return True
 
-try:
-    while True:
 
-        print("\n正在监听麦克风，请说话...")
+def main():
+    parser = argparse.ArgumentParser(description="逐句 ASR → 服务器参与意愿判断")
+    parser.add_argument('--server', help='语义服务器地址，默认 SEMANTIC_SERVER_URL 或 http://127.0.0.1:8765')
+    parser.add_argument('--prompt', help='本轮人工提示，省略时使用服务器的 task3_willingness 提示')
+    parser.add_argument('--text', help='直接发送文字进行联调，不加载 ASR、不打开麦克风')
+    parser.add_argument('--asr-only', action='store_true', help='仅做原有 ASR，不请求语义服务器')
+    args = parser.parse_args()
+    if args.text is not None:
+        if args.asr_only:
+            parser.error('--text 联调不能与 --asr-only 一起使用')
+        return 0 if send_text(args.text, args) else 1
+    model = load_model()
+    print("\n开始麦克风语音识别；按 Ctrl+C 退出程序")
+    if not args.asr_only:
+        print("本轮任务：是否愿意参加同伴游戏；说完一句后等待服务器返回判断。")
+    try:
+        while True:
+            print("\n正在监听麦克风，请说话...")
+            audio = record_sentence()
+            if audio is not None:
+                text = recognize(audio, model)
+                if text and any(c.isalnum() for c in text) and not args.asr_only:
+                    send_text(text, args)
+    except KeyboardInterrupt:
+        print("\n已停止语音识别")
+    return 0
 
-        audio = record_sentence()
 
-        if audio is not None:
-            recognize(audio)
-
-except KeyboardInterrupt:
-    print("\n已停止语音识别")
+if __name__ == '__main__':
+    raise SystemExit(main())

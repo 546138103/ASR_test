@@ -22,3 +22,7 @@ SenseVoiceSmall 使用分段重识别实现伪流式，实际延迟取决于分�
 ## 本地文件
 
 `.venv/`、`.cache/`、`models/`、个人测试录音和 `iris_experiments/` 均由 `.gitignore` 排除。Iris 练习文件仅保留在本地文件夹；运行其训练脚本时应先进入该文件夹，以便相对路径输出仍保存在其中。
+
+## ASR 接入语义服务器
+
+用户选定的逐句版 realtime_asr_test.py 已接入 HTTP 语义服务。双击 start_asr_semantic.cmd；先在 Semantic Recognition 启动服务器。详见 [README_SEMANTIC.md](README_SEMANTIC.md)。

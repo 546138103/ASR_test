@@ -85,3 +85,7 @@
 - SenseVoiceSmall 权重约 936 MB 已下载完成，本地模型加载成功，权重全部匹配。
 - 官方中文样例长 5.616 秒，本机 CPU 单次识别耗时约 0.53 秒；不含首次导入与模型加载，不代表所有语音的耗时。
 - 默认 Realtek 麦克风 16 kHz 单声道短时采集通过，停止后正常关闭；尚需用户现场说话确认拾音效果、阈值及识别准确率。
+
+## 逐句 ASR 与语义识别
+
+realtime_asr_test.py 现可将整句文字发送到服务器执行参与意愿判断。新入口为 start_asr_semantic.cmd；原 start_asr.cmd 不变。参见 [README_SEMANTIC.md](README_SEMANTIC.md)。
