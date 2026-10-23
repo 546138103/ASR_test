@@ -1,0 +1,28 @@
+# Local Python environment and generated caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+
+# Downloaded models and local Iris experiments
+/models/
+/iris_experiments/
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Credentials and logs
+.env
+.env.*
+!.env.example
+*.log
+
+# Personal microphone recordings
+/test.m4a
+/test.wav
+/test_yue.m4a
+/test_yue.wav

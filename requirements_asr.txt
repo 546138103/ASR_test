@@ -1,0 +1,4 @@
+# Python 3.14; reuse the existing PyTorch build (2.14.1 on this machine).
+funasr==1.4.16
+sounddevice==0.5.3
+soundfile==0.14.0
